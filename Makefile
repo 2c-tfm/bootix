@@ -7,7 +7,7 @@ QEMU = qemu-system-x86_64
 NAME = bootix.img
 S2NAME = env/stage2.bin
 
-CSRC = src/bootix.c
+CSRC = src/bootix.c src/io.c src/fmt.c #src/alloc.c
 BOOT_SRC = src/boot.s
 S2_SRC = src/entry.s
 

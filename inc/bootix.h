@@ -2,29 +2,35 @@
 #define BOOTIX_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
-typedef struct {
-	uint8_t 	filename[11];
-	uint8_t 	attr;           	// file attributes (fat32_dir_attr)
-	uint8_t 	nt_reserved;    	// reserved for NT
-	uint8_t 	creation_tenths; 	// creation time (tenths of sec)
-	uint16_t	creation_time;   	// creation time
-	uint16_t	creation_date;  	 // creation date
-	uint16_t	access_date;     	// last access date
-	uint16_t	first_cluster_hi;	// high 16 bits of first cluster
-	uint16_t	write_time;		// last write time
-	uint16_t	write_date;      	// last write date
-	uint16_t	first_cluster_lo;	// low 16 bits of first cluster
-	uint32_t	file_size;      	 // file size in bytes
-} fat32_dir_entry;
+#define SERIAL_PORT	0x3F8
+#define NULL		0
+#define VERSION		"0.1"
 
-typedef enum fat32_dir_attr {
-	RD_ONLY	= (1 << 0),			// READ_ONLY lsb
-	HIDDEN	= (1 << 1),			// hidden dir (should not show in dir listing)
-	SYS	= (1 << 2),			// System directory
-	VOLID	= (1 << 3),			// Volume ID
-	SUBDIR	= (1 << 4),			// Subdirectory
-	ARCHIVE	= (1 << 5),			// has changed since last backup
-} fat32_dir_attr;
+// some fmt macros
+typedef char* va_list;
+#define _INTSIZEOF(n)   ( (sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1) )
+#define va_start(ap, last)  ( ap = (va_list)&(last) + _INTSIZEOF(last) )
+#define va_arg(ap, type)    ( *(type *)((ap += _INTSIZEOF(type)) - _INTSIZEOF(type)) )
+#define va_end(ap)          ( (void)0 )
+
+// other incs
+#include "fat32.h"
+#include "mbr.h"
+#include "alloc.h"
+
+// io.c
+void putchar(char c);
+void puts(const char* str);
+void print(const char *str);
+void read(char *buff, uint32_t len);
+
+// fmt
+void printf(char *fmt, ...);
+
+// string functions
+void memcpy(void *dst, void *src, uint32_t n);
+
 
 #endif

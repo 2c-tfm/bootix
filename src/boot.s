@@ -1,7 +1,5 @@
 
-
-
-
+; ---------------  defs --------------- ;
 %define NULL		0
 %define convmem		0x8000
 %define BUFFER		0x6000
@@ -39,10 +37,7 @@
 %define DIR_ClusterLo	0x1a
 %define DIR_FileSize	0x1c
 ;; ---------- Some FAT defs ---------- ;;
-
-; org 0x7c00;
-; section .migration;
-; global migration;
+; ---------------  defs --------------- ;
 
 bits 16;
 org 0x6000
@@ -63,7 +58,6 @@ start:
 	mov sp, 0x7c00			;; setting up stack and segments
 	sti
     
-
 	mov si, sp;
 	mov di, 0x6000;
 	mov cx, 512;
@@ -79,7 +73,6 @@ migrate:
 
 
 ; TODO : parse 0xb fat32 with CHS addressing, for now we only handle LBA
-;; TODO : relocate to 0x0000:0x6000
 
 ; [params]
 ;;
@@ -235,8 +228,8 @@ load_fat_volid:
 	; saving lba
 
 	mov word[dap.count], 1		;; reading one sector
-	mov word[dap.offset], 0		;; reading in 0x0000:0x9000
-	mov word[dap.segment], 0x0900
+	mov word[dap.offset], 0x9000		;; reading in 0x0000:0x9000
+	mov word[dap.segment], 0x0
 
 load_sector_lba :
 	mov dl, [boot_drive]		;; drive mode
