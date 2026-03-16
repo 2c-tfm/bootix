@@ -4,9 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define DBG
 #define SERIAL_PORT	0x3F8
 #define NULL		0
-#define VERSION		"0.1"
+#define VERSION		"0.1 [Not Tested]"
 
 // some fmt macros
 typedef char* va_list;
@@ -19,6 +20,8 @@ typedef char* va_list;
 #include "fat32.h"
 #include "mbr.h"
 #include "alloc.h"
+#include "int.h"
+
 
 // io.c
 void putchar(char c);
@@ -31,6 +34,10 @@ void printf(char *fmt, ...);
 
 // string functions
 void memcpy(void *dst, void *src, uint32_t n);
+void memset(void *s, uint8_t c, uint32_t n);
+
+// modes
+extern void prot_to_real();
 
 
 #endif

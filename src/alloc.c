@@ -24,7 +24,7 @@ void *malloc(uint32_t size) {
 	uint32_t total;
 
 	if (size == 0) return NULL;
-		heap_init();
+	heap_init();
 
 	asize = sizeallign(size);
 	total = asize + CHNK_HDR_SZ; 
@@ -52,7 +52,7 @@ void *malloc(uint32_t size) {
 		victim->size = total | old_flags;
 		return chunk2mem(victim);
 	}
-
+	
 	return NULL;
 }
 
@@ -67,7 +67,7 @@ void free(void *p) {
 		arena->wild->size = victim_size + (sizenomask(arena->wild->size) | (victim->size & PREV_MASK));
 		return;
 	}
-
+	
 	if (!(victim->size & PREV_MASK)) {
 		uint32_t prev_size = victim->prevsize;
 		chunk *prev = (chunk *)((char*)victim - prev_size);

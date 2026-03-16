@@ -9,3 +9,12 @@ void memcpy(void *dst, void *src, uint32_t n){
 		i++;
 	}
 }
+
+void memset(void *s, uint8_t c, uint32_t n){
+	uint32_t i = 0;
+	while(i < n){
+		*(char *)s = c;
+		i++;
+	}
+
+}

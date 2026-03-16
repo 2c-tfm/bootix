@@ -130,13 +130,14 @@ read_stage_2:
 	mov [dap.lba_low + 2], ax
 
 
-	mov word[dap.count], 4
+	mov word[dap.count], 10		;; reading 10 sectors
 	mov word[dap.offset], 0x7c00	;; stage 2 will be loaded in 0x0000:0x7c00
 	mov word[dap.segment], 0x0
 
 	call load_sector_lba;
+	mov dl, [boot_drive];
+	mov [0x7bff], dl;		;; saving boot drive to stage 2. one byte after
 	jmp 0x7c00;
-	ret;
 
 
 ; [params]
@@ -340,7 +341,6 @@ done:
 
 ; section .bss
 ptable_end		equ 0x7c00+0x1be + (16 * 4)
-boot_drive   		db 0
 cluster_lba_start	dd 0
 data_cluster_lba	dd 0
 root_dir_cluster_lba	dd 0
@@ -358,11 +358,12 @@ dap:
 
 
 ;; error messages
-boot_err_msg		db 'Boot part not found.', 0x0a, 0;
-boot_succ		db 'Boot part found.', 0x0a, 0;
+boot_err_msg		db 'Boot not found', 0x0a, 0;
+boot_succ		db 'Boot part found', 0x0a, 0;
 boot_unvalid_fat	db 'Unvalid Boot part', 0xa, 0;
-stage2_nf		db 'S2 not found.', 0xa, 0;
+stage2_nf		db 'S2 not found', 0xa, 0;
 
+boot_drive   		db 0
 ; sig
 times  510 - ($-$$) db 0
 dw 0xaa55

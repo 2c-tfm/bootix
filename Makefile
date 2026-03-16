@@ -1,13 +1,13 @@
 # compiling stuff
 ASM = nasm
 CC = i386-elf-gcc
-CFLAGS = -m32 -ggdb -nostdlib -ffreestanding -mno-red-zone -fno-exceptions  -Wall -Wextra -Werror -T src/linker.ld
+CFLAGS = -m32 -ggdb -nostdlib -ffreestanding -mno-red-zone -fno-exceptions -T src/linker.ld # -Wall -Wextra -Werror 
 QEMU = qemu-system-x86_64
 
 NAME = bootix.img
 S2NAME = env/stage2.bin
 
-CSRC = src/bootix.c src/io.c src/fmt.c #src/alloc.c
+CSRC = src/bootix.c src/io.c src/fmt.c src/alloc.c src/mbr.c src/string.c src/int.c
 BOOT_SRC = src/boot.s
 S2_SRC = src/entry.s
 

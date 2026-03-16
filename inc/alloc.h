@@ -10,7 +10,7 @@
 #define HEAP_SIZE	0x1000
 #define HEAP_END	HEAP_START+HEAP_SIZE
 
-#define BINS 0x100
+#define BINS		100
 
 #define SIZE_SZ         4
 #define MALLOC_ALIGN    (SIZE_SZ * 2)  // 8
