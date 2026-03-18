@@ -43,6 +43,7 @@ void printf(char *fmt, ...);
 void memcpy(void *dst, void *src, uint32_t n);
 void memset(void *s, uint8_t c, uint32_t n);
 char upper(char c);
+uint32_t strcmp(char *sa, char *sb);
 uint32_t strlen(char *s);
 char *strdup(char *s);
 char *strchr(char *s, uint8_t c);

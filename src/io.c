@@ -17,6 +17,8 @@ void putchar(char c) {
 }
 
 void print(const char *str){
+	if (str == NULL)
+		str = "(NULL)";
 	while (*str) {
 		putchar(*str++);
 	}

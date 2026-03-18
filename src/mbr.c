@@ -70,12 +70,17 @@ static cnf_namespace *load_config(partition_table *bootable){
 	fat32_obj_free(fs);
 	cnf = cnf_parse(conf_cont);	// parsing the file
 	free(conf_cont);
+	return (cnf);
 	
 }
+// void display_menu(cnf_namespace *cnf){
+// 	puts("this is a display menu");
+// }
 
 void multiboot(){
 	partition_table **parts = detect_partitions();
 	uint8_t		i = 0;
+	cnf_namespace	*cnf;
 	
 	// finding the first bootable partition
 	while (i < PART_MAX){
@@ -91,5 +96,7 @@ void multiboot(){
 		log(ERR, "Bootable partition is not fat32, reinstall bootix or fix manually");
 	}
 	log(DBG, "Loading config file from first bootable partition");
-	load_config(parts[i]);
+	cnf = load_config(parts[i]);
+	// display_menu(cnf);
+	
 }

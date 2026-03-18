@@ -1,5 +1,14 @@
 #include "../inc/bootix.h"
 
+
+uint32_t strcmp(char *sa, char *sb){
+	uint32_t i = 0;
+	while (sa[i] == sb[i] && sb[i] != '\x00' && sa[i] != '\x00' ){
+		i++;
+	}
+	return (sa[i] - sb[i]);
+}
+
 uint32_t strlen(char *s){
 	uint32_t i = 0;
 	while (s[i] != '\x00'){

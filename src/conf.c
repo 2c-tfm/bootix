@@ -41,18 +41,26 @@ static cnf_entry	*cnf_parse_entry(char **cnf){
 	uint32_t i = 0;
 	char	sep;
 	cnf_entry *entry = malloc(sizeof(cnf_entry));
+	if (!entry)
+		return (NULL);
+	memset(entry, 0, sizeof(cnf_entry));
 
 	// parsing key
-	while (strchr("\t\n =", (*cnf)[i]) == NULL){
+	while ((*cnf)[i] &&strchr("\t\n =", (*cnf)[i]) == NULL){
 		i++;
 	}
-
+	
 	entry->key = malloc(i + 1);
+	if (entry->key == NULL) {
+		free(entry);
+		return (NULL);
+	}
 	memcpy(entry->key, *cnf, i);
 	entry->key[i] = '\x00';
 	*cnf+=i;
+
 	// skipping = and spaces
-	while (strchr("\t =", **cnf) != NULL && **cnf != '\0')
+	while (**cnf && strchr("\t =", **cnf) != NULL)
 		(*cnf)++;
 
 
@@ -62,13 +70,13 @@ static cnf_entry	*cnf_parse_entry(char **cnf){
 	
 	// parsing value
 	i = 0;
-	if (*cnf[i] == '"' || *cnf[i] == '\''){
-		sep = *cnf[i];
+	if (**cnf == '"' || **cnf == '\''){
+		sep = **cnf;
 		(*cnf)++;
-		while (*cnf[i] != sep && *cnf[i] != '\0')
+		while ((*cnf)[i] && (*cnf)[i] != sep)
 			i++;
 	} else {
-		while (strchr("\t\n =", (*cnf)[i]) == NULL  && (*cnf)[i] != '\0'){
+		while ((*cnf)[i] && strchr("\t\n =", (*cnf)[i]) == NULL){
 			i++;
 		}
 	}
@@ -81,6 +89,9 @@ static cnf_entry	*cnf_parse_entry(char **cnf){
 }
 static cnf_namespace	*cnf_init_namespace(){
 	cnf_namespace *head = malloc(sizeof(cnf_namespace));
+	if (head == NULL)
+		return (NULL);
+	memset(head, 0, sizeof(cnf_namespace));
 	head->ns = strdup("default");
 
 	return (head);
@@ -92,11 +103,14 @@ char	*cnf_parse_namespace(char **cnf){
 
 	(*cnf)++;
 	skip_whitespaces(cnf);
-	while (*cnf[i] != ']' && *cnf[i] != 0 && *cnf[i] != '\n'){
+	while ((*cnf)[i] && (*cnf)[i] != ']' && (*cnf)[i] != '\n'){
 		i++;
 	}
 	ns = malloc(i + 1);
-	memcpy(ns, cnf, i);
+	if (!ns)
+		return (NULL);
+	memcpy(ns, *cnf, i);
+	ns[i] = '\0';
 	if (*cnf[i] == ']')
 		(*cnf)++;
 	return (ns);
@@ -105,6 +119,8 @@ char	*cnf_parse_namespace(char **cnf){
 cnf_namespace	*cnf_parse(char *cnf){
 	cnf_namespace *head = cnf_init_namespace();
 	cnf_namespace *it = head;
+	it->entry = NULL;
+	it->next = NULL;
 	cnf_entry *centry = NULL;
 
 	while (*cnf != '\x00'){
@@ -112,10 +128,13 @@ cnf_namespace	*cnf_parse(char *cnf){
 		skip_comments(&cnf);
 		if (*cnf == '\x00')
 			break;
-		if(*cnf == '\n')
+		if(*cnf == '\n'){
+			cnf++;
 			continue;
+		}
 		if (*cnf == '['){		// parsing namespaces
 			it->next = malloc(sizeof(cnf_namespace));
+			memset(it->next, 0, sizeof(cnf_namespace));
 			it = it->next;
 			it->ns = cnf_parse_namespace(&cnf);
 			it->entry = NULL;
@@ -129,8 +148,49 @@ cnf_namespace	*cnf_parse(char *cnf){
 		}
 		skip_nl(&cnf);
 	}
+#ifdef DBGX
 	print_cnf(head);
-
+#endif
 	return (head);
 }
 
+
+// Searching 
+cnf_namespace	*cnf_search_namespace(cnf_namespace *ns, char *dns){
+	cnf_namespace *it = ns;
+	while (it != NULL){
+		if (strcmp(dns, it->ns) == 0)
+			return (it);
+		it = it->next;
+	}
+	return (NULL);
+}
+
+cnf_entry	*cnf_search_entries(cnf_entry *entries, char *dentry){
+	cnf_entry *it = entries;
+	while (it != NULL){
+		if (strcmp(dentry, it->key) == 0)
+			return (it);
+		it = it->next;
+	}
+	return (NULL);
+}
+
+
+// jantorial
+void cnf_free(cnf_namespace *ns){
+	while (ns != NULL){
+		cnf_entry *en = ns->entry;
+		while (en != NULL){
+			cnf_entry *next = en->next;
+			free(en->key);
+			free(en->val);
+			free(en);
+			en = next;
+		}
+		cnf_namespace *next_ns = ns->next;
+		free(ns->ns);
+		free(ns);
+		ns = next_ns;
+	}
+}

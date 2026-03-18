@@ -1,1 +1,15 @@
-jantofix
+# some general driver inits??
+insmod=part_gpt
+insmod = part_msdos
+   insmod = vga
+                
+[Archlinux]
+	name = "Arch linux"
+	bootsplash = False
+	initrd = "/intel-ucode.img /initramfs-linux.img"
+
+# an average windows partition 
+[Win]
+	name = "Windows 11"
+	bootsplash = True
+	chainload = False

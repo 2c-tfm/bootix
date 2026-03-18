@@ -36,7 +36,6 @@ stage1:
 
 stage2:
 	$(ASM) -f elf $(S2_SRC) -o $(STAGE2)
-	# $(CC) $(CSRC) $(STAGE2) -o $(S2NAME) $(CFLAGS)
 	$(CC) $(CSRC) $(STAGE2) -o build/stage2.elf $(CFLAGS) 
 	objcopy -O binary build/stage2.elf $(S2NAME)
 

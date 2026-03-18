@@ -105,6 +105,7 @@ void *fat32_obj_free(fat32_obj *fs){
 	// freeing rootdir entries lol
 	while (dentry != NULL){
 		free(dentry);
+		dentry = dentry->next;
 	}
 	free(fs->volid);
 	free(fs);
