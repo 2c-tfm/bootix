@@ -71,9 +71,8 @@ uint32_t fat32_dir_cluster(fat32_dir_entry *dir){
 }
 
 // opens and read file
-char *fat32_read(char *filename, fat32_obj *fs, fat32_dir_entry *dentry, uint32_t size, uint32_t offset){
-	char *content = NULL; 
-	uint32_t sectors = 0;
+char *fat32_read(char *buff, char *filename, fat32_obj *fs, fat32_dir_entry *dentry, uint32_t size, uint32_t offset){
+	char tmp[512];
 
 	while (dentry != NULL){
 		if (fat32_filenamecmp(dentry->filename, filename) == 0)
@@ -81,14 +80,48 @@ char *fat32_read(char *filename, fat32_obj *fs, fat32_dir_entry *dentry, uint32_
 		dentry = dentry->next;
 	}
 	if (dentry == NULL)
-		return (NULL);
-	if (size == 0)				// read the whole file
-		size = dentry->file_size;
-	content = malloc(size);
-	memset(content, '\x00', size);
-	// reading the content of the file
-	read_size_lba(content, size, cluster_to_lba(fat32_dir_cluster(dentry), fs) + offset);
-	return (content);
+		return NULL;
+
+	if (offset >= dentry->file_size)
+		return NULL;
+	if (size == 0 || offset + size > dentry->file_size)
+		size = dentry->file_size - offset;
+
+	if (buff == NULL){
+		buff = malloc(size + 1);
+		if (!buff)
+			return NULL;
+		memset(buff, 0, size + 1);
+	}
+
+	uint32_t lba = cluster_to_lba(fat32_dir_cluster(dentry), fs) + (offset / 512);
+
+	read_size_lba(tmp, 512, lba);
+
+	uint32_t first = 512 - (offset % 512);
+	if (first > size)
+		first = size;
+
+	memcpy(buff, tmp + (offset % 512), first);
+
+	if (size > first){
+		uint32_t remain = size - first;
+		lba++;
+		if (remain <= 512){
+			read_size_lba(tmp, 512, lba);
+			memcpy(buff + first, tmp, remain);
+		} else {
+			// read full sector
+			read_size_lba(buff + first, 512, lba);
+
+			// read last partial
+			read_size_lba(tmp, 512, lba + 1);
+			memcpy(buff + first + 512, tmp, remain - 512);
+		}
+	}
+
+	buff[size] = '\0';
+	return buff;
 }
 
 fat32_obj *fat32_init(partition_table *bootable){

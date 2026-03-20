@@ -50,7 +50,7 @@ void memcpy(void *dst, void *src, uint32_t n){
 		return ;
 	uint32_t i = 0;
 	while (i < n){
-		*(uint8_t *)dst++ = *(uint8_t *)src++;
+		*(char *)dst++ = *(char *)src++;
 		i++;
 	}
 }

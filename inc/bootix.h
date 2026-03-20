@@ -25,7 +25,7 @@ typedef char* va_list;
 #include "log.h"
 #include "time.h"
 #include "conf.h"
-#include "boot.h"
+#include "kboot.h"
 
 
 void hang(void);

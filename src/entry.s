@@ -16,6 +16,25 @@ clear_screen:
 	int 0x10;
 	ret;
 
+real_gdt:
+    dw 0x0000, 0x0000, 0x0000, 0x0000
+    dw 0xFFFF, 0x0000, 0x9A00, 0x008F 
+real_gdt_ptr:
+    dw real_gdt_ptr - real_gdt - 1
+    dd real_gdt
+
+; linux kernel chain
+krjmp:
+	xor ax, ax
+	mov ds, ax
+	mov es, ax
+	mov ss, ax
+	mov fs, ax
+	mov gs, ax
+	mov sp, 0x7C00
+	mov dl, [boot_drive] 
+	jmp 0x0009:0x9000
+
 section .modes
 bits 16;
 
@@ -142,7 +161,6 @@ int_table:
 
 int_call	dw 0
 
-
 bits 32;
 global prot_to_real;
 
@@ -175,9 +193,21 @@ prot_ret:
 	ret                          ; return to caller (in protected mode)
 
 
+global kchain
+kchain:
+	cli
+	lgdt [real_gdt_ptr]
+	mov eax, cr0
+	and al, 0xfe
+	mov cr0, eax
+	jmp 0x8:krjmp
+
+
+
+
 section .bss
 align 4
-global boot_drive
+global boot_drive 
 boot_drive	db 0;
 saved_esp:        resd 1
 bootix_stack_bottom: equ $

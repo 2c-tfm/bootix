@@ -62,7 +62,7 @@ partition_table **detect_partitions(){
 static cnf_namespace *load_config(partition_table *bootable){
 	log(DBG, "Loading partition in lba %p\n", bootable->lba);
 	fat32_obj *fs = fat32_init(bootable);
-	char *conf_cont = fat32_read("btx.cnf", fs, fs->rootdir, 0, 0);
+	char *conf_cont = fat32_read(NULL, "btx.cnf", fs, fs->rootdir, 0, 0);
 	cnf_namespace *cnf;
 	if (conf_cont == NULL){
 		log(ERR, "Config file (btx.cnf) not found, boot from another usb and run os-probe");
@@ -144,5 +144,9 @@ void multiboot(){
 	os = cnf_clone(os);
 	cnf_free(cnf->next);				// freeing other entries
 	cnf->next = os;					// saving os env with default
-	boot(cnf, fs);
+	if ( cnf_search_entries(cnf->next->entry, "chainload")){
+		chainload(cnf, fs);
+	} else {
+		boot(cnf, fs);
+	}
 }
