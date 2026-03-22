@@ -25,6 +25,9 @@ real_gdt_ptr:
 
 ; linux kernel chain
 krjmp:
+	mov eax, cr0
+	and eax, 0xfffffffe
+	mov cr0, eax
 	xor ax, ax
 	mov ds, ax
 	mov es, ax
@@ -33,7 +36,7 @@ krjmp:
 	mov gs, ax
 	mov sp, 0x7C00
 	mov dl, [boot_drive] 
-	jmp 0x0009:0x9000
+	jmp 0x9000:0x0200
 
 section .modes
 bits 16;
@@ -196,11 +199,12 @@ prot_ret:
 global kchain
 kchain:
 	cli
-	lgdt [real_gdt_ptr]
-	mov eax, cr0
-	and al, 0xfe
-	mov cr0, eax
-	jmp 0x8:krjmp
+	; lgdt [real_gdt_ptr]
+	mov ax, RDATA_SEG;
+	mov ds, ax;
+	mov es, ax;
+	mov ss, ax;
+	jmp 0x18:krjmp
 
 
 

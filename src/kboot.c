@@ -6,7 +6,7 @@ static partition_table *find_kernel_fs(cnf_namespace *cnf, partition_table **fs)
 	uint32_t	bpart_num = 0;
 	uint32_t	i = 0;
 
-	if (bpartenv == NULL | bpartenv->val == NULL){
+	if (bpartenv == NULL || bpartenv->val == NULL){
 		log(ERR, "bpart env not found, please run os-probe");
 	}
 	bpart_num = atoi(bpartenv->val);
@@ -44,6 +44,8 @@ void kenv(linux_kernel_header *khdr, cnf_namespace *cnf){
 	if (khdr->version < 0x0203){
 		log(WARN, "Kernel version is too old, might experience some hiccups");
 	}
+	khdr->vid_mode = 0xffff;		// letting the kernel decide
+	khdr->root_dev = 0; 
 	khdr->realmode_swtch = 0;
 	khdr->ext_loader_ver = 0;
 	khdr->ext_loader_type = 0;
@@ -51,7 +53,7 @@ void kenv(linux_kernel_header *khdr, cnf_namespace *cnf){
 	khdr->cmd_line_ptr = CMDLINE_PTR;
 	cnf_entry * cmdline= cnf_search_entries(cnf->entry, "cmdline");
 	if (cmdline && cmdline->val){
-		khdr->cmdline_size = strlen(cmdline->val);
+		khdr->cmdline_size = strlen(cmdline->val) + 1;
 		memcpy((void *)khdr->cmd_line_ptr, cmdline->val, khdr->cmdline_size);
 	}
 	khdr->heap_end_ptr = HEAP_END_PTR;		// CHANGE ME
@@ -64,11 +66,10 @@ boot_params *kload(linux_kernel_header *khdr, fat32_obj *kfs, char *kfname){
 		khdr->setup_sects = 4;
 
 	void *rload_mem = (void *) 0x90000;		// CHANGE ME
-	void *cload_mem = (void *) khdr->code32_start;		// CHANGE ME
-	fat32_read(rload_mem, kfname, kfs, kfs->rootdir, khdr->setup_sects * 512, 0);
+	fat32_read(rload_mem, kfname, kfs, kfs->rootdir, (khdr->setup_sects + 1) * 512, 0);
 	
 	// loading compressed kernel now
-	fat32_read(cload_mem, kfname, kfs, kfs->rootdir, 0, khdr->setup_sects * 512);
+	fat32_read((void *) khdr->code32_start, kfname, kfs, kfs->rootdir, 0, (khdr->setup_sects + 1) * 512);
 	
 	// preparing the boot_params
 	boot_params *bparams = (boot_params *) 0x80000;
