@@ -176,6 +176,30 @@ cnf_entry	*cnf_search_entries(cnf_entry *entries, char *dentry){
 	return (NULL);
 }
 
+cnf_entry	*cnf_find_allentries(cnf_entry *entries, char *dentry){
+	cnf_entry *it = entries;
+	cnf_entry *cpy = NULL;
+	cnf_entry *cpyit = NULL;
+	while (it != NULL){
+		if (strcmp(dentry, it->key) == 0){
+			if (cpyit != NULL){
+				cpyit->next = malloc(sizeof(cnf_entry));
+				cpyit = cpyit->next;
+			} else {
+				cpyit = malloc(sizeof(cnf_entry));
+				cpy = cpyit;
+			}
+			if (cpyit == NULL)
+				return (NULL);
+			cpyit->key = strdup(it->key);
+			cpyit->val = strdup(it->val);
+			cpyit->next = NULL;
+		}
+		it = it->next;
+	}
+	return (cpy);
+}
+
 
 // jantorial
 void cnf_free(cnf_namespace *ns){
@@ -192,6 +216,16 @@ void cnf_free(cnf_namespace *ns){
 		free(ns->ns);
 		free(ns);
 		ns = next_ns;
+	}
+}
+
+void cnf_free_entries(cnf_entry *en){
+	while (en != NULL){
+		cnf_entry *next = en->next;
+		free(en->key);
+		free(en->val);
+		free(en);
+		en = next;
 	}
 }
 
@@ -219,3 +253,17 @@ cnf_namespace *cnf_clone(cnf_namespace *ns){
 	
 	return (clone);
 }
+uint32_t	cnf_len_entries(cnf_entry *entries){
+	cnf_entry *it = entries;
+	uint32_t i = 0;
+
+	if (entries == NULL)
+		return (i);
+
+	while (it != NULL){
+		i++;
+		it = it->next;
+	}
+	return (i);
+}
+

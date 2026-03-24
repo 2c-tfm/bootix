@@ -75,19 +75,58 @@ void kload(linux_kernel_header *khdr, fat32_obj *kfs, char *kfname){
 	memcpy(rload_mem + 0x1f1, khdr, sizeof(linux_kernel_header));
 }
 
+char *kchose(cnf_namespace *cnf){
+	char buff[8];
+	cnf_entry *kfname_ent = cnf_find_allentries(cnf->next->entry, "kernel");
+	char *kfname = "vmlinuz";
+	
+	if (cnf_len_entries(kfname_ent) > 1){
+		memset(buff, 0, 8);
+		printf("Please chose a kernel to boot from: \n");
+		uint32_t i = 0;
+		cnf_entry *kfit = kfname_ent;
+		while (kfit != NULL){
+			printf("\t[%d] - %s\n", i, kfit->val);
+			kfit = kfit->next;
+			i++;
+		}
+		int32_t choise = -1;
+		while (choise > i || choise < 0){
+			printf(">> ");
+			read(buff, 7);
+			choise = atoi(buff);
+			if (choise > i || choise < 0){
+				printf("Unvalid entry.\n");
+			}
+		}
+		i = 0;
+		kfit = kfname_ent;
+		while (i < choise){
+			kfit = kfit->next;
+			i++;
+		}
+		kfname = strdup(kfit->val);
+		cnf_free_entries(kfname_ent);
+		return (kfname);
+
+	}
+	else if (kfname_ent != NULL)
+		kfname = kfname_ent->val;
+
+	return (strdup(kfname));
+}
+
 
 // last step : load kernel from /boot and jump to it
 void boot(cnf_namespace *cnf, partition_table **fs){
 	partition_table *kpart = find_kernel_fs(cnf, fs);
 	fat32_obj *kfs = fat32_init(kpart);
 	linux_kernel_header *khdr;
-	cnf_entry *kfname_ent = cnf_search_entries(cnf->next->entry, "kernel_filename");
-	char *kfname = "vmlinuz";
+	char *kfname = kchose(cnf);
 
-	if (kfname_ent != NULL)
-		kfname = kfname_ent->val;
-
+#ifndef DBGX
 	clear_screen();
+#endif
 	printf("Booting from %s\n", cnf->next->ns);
 	khdr = (linux_kernel_header *) fat32_read(NULL, kfname, kfs, kfs->rootdir, 1024, 0x01f1);
 	if (khdr == NULL){
