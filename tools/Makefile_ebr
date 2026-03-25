@@ -1,0 +1,113 @@
+# compiling stuff
+ASM = nasm
+CC = i386-elf-gcc
+CFLAGS = -m32 -ggdb -nostdlib -ffreestanding -mno-red-zone -fno-exceptions -T src/linker.ld # -Wall -Wextra -Werror 
+QEMU = qemu-system-x86_64
+
+NAME = bootix.img
+S2NAME = env/stage2.bin
+
+CSRC = src/bootix.c src/io.c src/fmt.c src/alloc.c src/mbr.c src/string.c \
+       src/int.c src/fat32.c src/log.c src/time.c src/conf.c src/kboot.c
+BOOT_SRC = src/boot.s
+S2_SRC = src/entry.s
+
+# Partition layout (sector = 512 bytes)
+PART_START = 2048                     # first partition start (sector)
+BOOTP_SIZE_MB = 100                   # size of FAT32 boot partition (MiB)
+TOTAL_SIZE_MB = 250                   # total disk size (MiB)
+
+# Compute sizes in sectors
+BOOTP_SECS = $(shell echo $$(($(BOOTP_SIZE_MB) * 2048)))
+TOTAL_SECS  = $(shell echo $$(($(TOTAL_SIZE_MB) * 2048)))
+
+# Extended partition start and size
+EXTENDED_START = $(shell echo $$(($(PART_START) + $(BOOTP_SECS))))
+EXTENDED_SECS  = $(shell echo $$(($(TOTAL_SECS) - $(EXTENDED_START))))
+
+# Logical partitions: 6, each needs one EBR sector
+LOGICAL_COUNT = 6
+EXTENDED_DATA_SECS = $(shell echo $$(($(EXTENDED_SECS) - $(LOGICAL_COUNT))))
+LOGICAL_BASE_SECS = $(shell echo $$(($(EXTENDED_DATA_SECS) / $(LOGICAL_COUNT))))
+LOGICAL_REMAINDER = $(shell echo $$(($(EXTENDED_DATA_SECS) % $(LOGICAL_COUNT))))
+
+# Files to copy to FAT32 partition
+PART_FILES = env/btx.cnf env/stage2.bin env/vmlinuz
+
+STAGE1 = build/boot.bin
+STAGE2 = build/entry.bin
+
+# Temporary partition images
+BOOT_IMG = build/boot.fat32
+ROOT_IMG = build/rootfs.ext4
+
+all: build stage1 stage2
+
+build:
+	if [ ! -d "build/" ]; then \
+		mkdir build; \
+	fi
+
+stage1: 
+	$(ASM) -f bin $(BOOT_SRC) -o $(STAGE1)
+
+stage2:
+	$(ASM) -f elf $(S2_SRC) -o $(STAGE2)
+	$(CC) $(CSRC) $(STAGE2) -o build/stage2.elf $(CFLAGS) 
+	objcopy -O binary build/stage2.elf $(S2NAME)
+
+# Create the FAT32 boot partition image
+$(BOOT_IMG):
+	dd if=/dev/zero of=$@ bs=1 count=0 seek=$(shell echo $$(($(BOOTP_SECS) * 512))) status=none
+	mkfs.fat -F 32 $@ > /dev/null
+	mcopy -i $@ $(PART_FILES) ::
+
+# Create the ext4 root filesystem image (size = first logical partition size)
+$(ROOT_IMG):
+	dd if=/dev/zero of=$@ bs=1 count=0 seek=$(shell echo $$(($(LOGICAL_BASE_SECS) * 512))) status=none
+	mkfs.ext4 -d env/initramfs -O ^64bit -F $@ > /dev/null
+
+img: stage1 stage2 $(BOOT_IMG) $(ROOT_IMG)
+	# Create empty disk image
+	dd if=/dev/zero of=$(NAME) bs=1M count=$(TOTAL_SIZE_MB) status=none
+
+	# Write partition table with explicit starts for logical partitions
+	( \
+		echo "label: dos"; \
+		echo "unit: sectors"; \
+		echo "$(NAME)1 : start=$(PART_START), size=$(BOOTP_SECS), type=c, bootable"; \
+		echo "$(NAME)2 : start=$(EXTENDED_START), size=$(EXTENDED_SECS), type=f"; \
+		start=$$(( $(EXTENDED_START) + 1 )); \
+		for i in $$(seq 1 $(LOGICAL_COUNT)); do \
+			part_num=$$((4 + i)); \
+			if [ $$i -eq $(LOGICAL_COUNT) ]; then \
+				size=$$(( $(LOGICAL_BASE_SECS) + $(LOGICAL_REMAINDER) )); \
+			else \
+				size=$(LOGICAL_BASE_SECS); \
+			fi; \
+			echo "$(NAME)$$part_num : start=$$start, size=$$size, type=83"; \
+			start=$$(( $$start + $$size + 1 )); \
+		done; \
+	) | sfdisk $(NAME)
+
+	# Write bootloader to MBR (first 446 bytes)
+	dd if=$(STAGE1) of=$(NAME) bs=446 count=1 conv=notrunc status=none
+
+	# Write the FAT32 boot partition image
+	dd if=$(BOOT_IMG) of=$(NAME) bs=512 seek=$(PART_START) conv=notrunc status=none
+
+	# Write the ext4 root filesystem to the first logical partition
+	# dd if=$(ROOT_IMG) of=$(NAME) bs=512 seek=$$(($(EXTENDED_START) + 1)) conv=notrunc status=none
+
+run: build stage1 img
+	$(QEMU) -nographic -serial mon:stdio -drive format=raw,file=$(NAME)
+
+dbg: build stage1 img
+	# $(QEMU) -nographic -serial mon:stdio -drive format=raw,file=$(NAME) -s -S
+	qemu-system-i386 -nographic -serial mon:stdio -drive format=raw,file=$(NAME) -s -S
+
+clean: 
+	rm -rf build/
+
+fclean: clean 
+	rm -f $(NAME)

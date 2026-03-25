@@ -39,23 +39,25 @@ partition_table *detect_partitions(void *partable_ptr){
 	// iterating over all the partition tables
 	partition_table *fs = NULL;
 	partition_table *fsit = NULL;
+	partition_table *insurance = NULL;
 
-	int i = -1;
-	while (++i < 4){
-		if (*(char *)partable_ptr == 0) {
-			continue;
-		}
+	int i = 0;
+	while (i < 4){
 		if (fsit == NULL){
 			fsit = malloc(sizeof(partition_table));
+			insurance = fsit;
 			fs = fsit;
 		} else {
 
 			fsit->next = malloc(sizeof(partition_table));
+			insurance = fsit;
 			fsit = fsit->next;
 		}
 		init_partable(fsit, (void *) partable_ptr + (16 * i));
 		// including extended partitions
 		if (fsit->sys_id == SYS_EXT_CHS || fsit->sys_id == SYS_EXT_LBA){
+			free(fsit);
+			fsit = insurance;		// we don't wanna save extended
 			// reading the extended boot record
 			char *ebr = malloc(512);
 			read_sector_lba(ebr, 1, fsit->lba);
@@ -66,6 +68,7 @@ partition_table *detect_partitions(void *partable_ptr){
 			fsit = efs;
 			free(ebr);
 		}
+		i++;
 #ifdef DBGX
 		print_partition(fsit);
 #endif
